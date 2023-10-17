@@ -1,8 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CreateTaskDto } from './dtos/create-task.dto';
+import { TaskFilterDto } from './dtos/get-tasks-filter.dto';
 import Task from './task.entity';
-import TaskRepository from './task.repository';
+import TaskRepository from './tasks.repository';
 import { TaskStatus } from './tasks.model';
 
 @Injectable()
@@ -22,10 +23,19 @@ export class TasksService {
     return await this.taskRepository.find({});
   }
 
-  async getTasksWithFilters(search: string, status: string) {
-    const query = this.taskRepository.createQueryBuilder()
-
-    return this.taskRepository.findBy({title.inc})
+  async getTasksWithFilters(taskFilter: TaskFilterDto) {
+    const { search, status } = taskFilter;
+    const query = this.taskRepository.createQueryBuilder();
+    if (status) {
+      query.andWhere('task.status = :status', { status });
+    }
+    if (search) {
+      query.andWhere(
+        'task.title LIKE LOWER(:search) OR task.description LIKE LOWER(:search)',
+        { search },
+      );
+    }
+    return query.getMany();
   }
 
   async createTask(createTaskDto: CreateTaskDto) {
